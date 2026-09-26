@@ -1,0 +1,20 @@
+{
+  "name": "dynamic-ai-53",
+  "version": "3.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --check server.js src/index.js",
+    "check": "node --check server.js src/index.js",
+    "lint": "node --check server.js src/index.js",
+    "dev": "node server.js",
+    "start": "node server.js",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

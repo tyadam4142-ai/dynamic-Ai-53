@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dynamic AI 53 — Seller Control</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f8fc;color:#17233b}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0%,#e8f0ff,transparent 30%),#f6f8fc}.wrap{width:min(1120px,calc(100% - 28px));margin:30px auto;display:grid;gap:16px}.card{background:#fff;border:1px solid #dde5f1;border-radius:22px;padding:20px;box-shadow:0 20px 70px rgba(50,77,120,.08)}h1,h2{margin:0 0 8px;letter-spacing:-.03em}p,.muted{color:#6d7e98;font-size:13px;line-height:1.55}.row{display:flex;gap:9px;flex-wrap:wrap}.input,.select{flex:1;min-width:190px;padding:12px 13px;border:1px solid #d8e1ed;border-radius:12px;background:#fbfdff}.btn{border:0;border-radius:12px;padding:12px 15px;background:#315efb;color:#fff;font-weight:800;cursor:pointer}.btn.alt{background:#eef3fb;color:#42536e}.accounts{display:grid;gap:10px;margin-top:12px}.account{padding:14px;border:1px solid #e0e7f1;border-radius:15px;background:#fbfdff}.tiny{font-size:11px;color:#7e8ea6;margin-top:4px}.out{margin-top:12px;white-space:pre-wrap;font-size:12px;color:#4c5d79}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{padding:14px;border:1px solid #e0e7f1;border-radius:15px;background:#fbfdff}.num{font-size:24px;font-weight:900}@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style></head><body><main class="wrap">
+<section class="card"><h1>Dynamic AI 53 — Seller Control</h1><p>Private owner dashboard. Enter the <code>ADMIN_SECRET</code> you set with <code>wrangler secret put ADMIN_SECRET</code>. Approve subscriptions, issue activation codes, transfer devices, revoke access and inspect live AI providers.</p><div class="row"><input id="secret" class="input" type="password" placeholder="Your ADMIN_SECRET"><button class="btn" onclick="loadAll()">Load dashboard</button><button class="btn alt" onclick="checkAi()">Run AI Diagnostics</button><a href="/dynamic-ai-53-production.zip" download class="btn alt" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">📦 Download GitHub ZIP</a></div><div id="out" class="out">Seller control ready. Enter your secret above and click Load dashboard.</div></section>
+<section class="card"><div class="grid"><div class="stat"><div class="muted">Users</div><div id="users" class="num">—</div></div><div class="stat"><div class="muted">Approved</div><div id="approved" class="num">—</div></div><div class="stat"><div class="muted">Pending</div><div id="pending" class="num">—</div></div><div class="stat"><div class="muted">Mode</div><div class="num" style="font-size:18px">OWNER</div></div></div></section>
+<section class="card"><h2>Customer action</h2><div class="row"><input id="phone" class="input" placeholder="+919876543210"><select id="tier" class="select"><option value="free">Free</option><option value="silver" selected>Silver</option><option value="gold">Gold</option><option value="diamond">Diamond</option></select><input id="code" class="input" placeholder="Activation code (optional)"></div><div class="row" style="margin-top:9px"><button class="btn" onclick="approve()">Approve / Activate</button><button class="btn alt" onclick="revoke()">Revoke</button><button class="btn alt" onclick="transferDevice()">Transfer device</button><button class="btn alt" onclick="rotateCode()">New activation code</button></div></section>
+<section class="card"><h2>AI providers</h2><p class="muted">Live status of your configured model pipelines and AI endpoints.</p><div id="aiResults" class="accounts"><div class="tiny">Click "Run AI Diagnostics" above to test all active model routes.</div></div></section>
+<section class="card"><h2>Accounts</h2><div id="accounts" class="accounts"><div class="tiny">Enter the admin secret, then load the dashboard.</div></div></section></main>
+<script>
+const $=id=>document.getElementById(id);
+const storedSecret = localStorage.getItem('da53_admin_secret') || '';
+$('secret').value = storedSecret;
+
+const call=async(path,body={})=>{
+  const secret=$('secret').value.trim();
+  if (secret) localStorage.setItem('da53_admin_secret', secret);
+  let r;
+  try {
+    r = await fetch('/api'+path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-DA53-Admin-Secret': secret
+      },
+      body: JSON.stringify(body)
+    });
+  } catch (netErr) {
+    throw new Error('Network error: ' + netErr.message + '. Please check that the server is reachable.');
+  }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.ok === false) {
+    if (r.status === 401) {
+      throw new Error('Authorization failed: Incorrect admin secret.');
+    }
+    throw new Error(j.error || j.message || `Request failed with HTTP ${r.status}`);
+  }
+  return j;
+};
+
+async function loadAll(){
+  try{
+    const [a,s]=await Promise.all([call('/admin/accounts'),call('/admin/stats')]);
+    $('users').textContent=s.stats.users;
+    $('approved').textContent=s.stats.approved;
+    $('pending').textContent=s.stats.pending_requests;
+    $('accounts').innerHTML=(a.accounts||[]).map(x=>`<div class="account" style="cursor:pointer" onclick="$('phone').value='${esc(x.phone)}';$('out').textContent='Selected ${esc(x.phone)}';"><b>${esc(x.phone)}</b> · ${esc(x.plan_name)} · <b>${x.approved?'APPROVED':'PENDING'}</b><div class="tiny">Credits: ${x.remaining_tokens==null?'unlimited':Number(x.remaining_tokens).toLocaleString()} · Device: ${x.device_bound?'bound':'not bound'} · Code: ${x.access_code_hint?esc(x.access_code_hint):'—'} (click to select)</div></div>`).join('')||'<div class="tiny">No accounts.</div>';
+    $('out').textContent='Dashboard loaded successfully.';
+  }catch(e){
+    $('out').textContent=e.message;
+  }
+}
+
+async function approve(){
+  try{
+    const j=await call('/admin/approve',{phone:$('phone').value,tier:$('tier').value,code:$('code').value});
+    $('out').textContent=`Approved ${j.phone}. Activation code: ${j.access_code}`;
+    await loadAll();
+  }catch(e){
+    $('out').textContent=e.message;
+  }
+}
+
+async function revoke(){
+  try{
+    $('out').textContent=(await call('/admin/revoke',{phone:$('phone').value})).message;
+    await loadAll();
+  }catch(e){
+    $('out').textContent=e.message;
+  }
+}
+
+async function transferDevice(){
+  try{
+    $('out').textContent=(await call('/admin/transfer-device',{phone:$('phone').value})).message;
+    await loadAll();
+  }catch(e){
+    $('out').textContent=e.message;
+  }
+}
+
+async function rotateCode(){
+  try{
+    const j=await call('/admin/rotate-code',{phone:$('phone').value});
+    $('out').textContent=`New activation code: ${j.access_code}`;
+    await loadAll();
+  }catch(e){
+    $('out').textContent=e.message;
+  }
+}
+
+async function checkAi(){
+  $('aiResults').innerHTML='<div class="tiny">Testing providers live…</div>';
+  try{
+    const j=await call('/admin/ai-check');
+    const order=['groq','openrouter_llama','openrouter','gemini','anthropic'];
+    $('aiResults').innerHTML=order.map(name=>{
+      const r=j.results[name];
+      if(!r) return '';
+      const status=!r.configured?'<b style="color:#94a3b8">NOT CONFIGURED</b>':r.ok?'<b style="color:#12b76a">WORKING</b>':'<b style="color:#e5484d">FAILING</b>';
+      const detail=r.ok?`Model: ${esc(r.model)} · Sample reply: “${esc(r.sample)}”`:(r.error||r.message||'');
+      return `<div class="account"><b>${esc(r.label)}</b> — ${status}<div class="tiny">${esc(detail)}</div></div>`;
+    }).join('');
+  }catch(e){
+    $('aiResults').innerHTML=`<div class="tiny">${esc(e.message)}</div>`;
+  }
+}
+
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+}
+
+// Auto-load on visit if secret exists
+if ($('secret').value) {
+  loadAll();
+}
+</script></body></html>

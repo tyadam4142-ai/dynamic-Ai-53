@@ -1,0 +1,7 @@
+{
+  "name": "Dynamic AI 53",
+  "description": "An agentic build studio with subscription access, server-routed AI, live preview and seller deployment tools.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

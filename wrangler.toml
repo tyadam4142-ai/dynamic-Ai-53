@@ -1,0 +1,25 @@
+name = "dynamic-ai-53"
+main = "src/index.js"
+compatibility_date = "2026-09-25"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dynamic-ai-53-db"
+database_id = "5cf2d5e5-3642-4020-b8df-ffb227c3d57a"
+
+[vars]
+CORS_ORIGINS = "https://dynamicrobotics53.com,https://www.dynamicrobotics53.com,https://dynamic-ai-53.tyadam4142.workers.dev,http://localhost:8787"
+GEMINI_MODEL = "gemini-3.8-flash"
+GROQ_MODEL = "openai/gpt-oss-120b"
+OPENROUTER_MODEL = "openrouter/free"
+OPENROUTER_LLAMA_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+ANTHROPIC_MODEL = "claude-sonnet-5"
+WHATSAPP_API_VERSION = "v23.0"
+OWNER_WHATSAPP = ""
+GITHUB_ALLOWED_REPOS = ""
